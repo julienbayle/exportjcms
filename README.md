@@ -1,4 +1,4 @@
-JMS data exporter
+rJMS data exporter
 ==================
 
 This python script allows to export data from JCMS using the OpenAPI
