@@ -24,7 +24,7 @@ def getValues(url, identifier, fields):
 		if len(d) == 1:
 			value = [it.text.strip() for it in d[0].findall('item') ]
 			if len(value) == 0:
-				value.append(d[0].text.strip())
+				value.append(d[0].text.encode("latin-1", errors='ignore').strip())
 			values[field] = ", ".join(value)
 	
 	return values
