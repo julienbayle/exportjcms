@@ -10,23 +10,37 @@ def getIDs(inputfile):
 		IDs = [row[0] for row in csvreader if len(row) > 0]
 	return IDs
 
-def getValues(url, identifier, fields):
-	values = {}
+def convert(item, categories):
+	data = item.text
+
+	if 'class' in item.attrib and item.attrib['class'] == "com.jalios.jcms.Category" :
+		if len(categories) == 0 or item.attrib['id'] in categories:
+			data = item.text[item.text.rfind('/')-len(item.text)+1:]
+		else:
+			data = ""
+	
+	return data.encode("latin-1", errors='ignore').strip()
+
+def getData(url, identifier) :
 	response = requests.get(url + "/rest/data/" + identifier)
 
 	if response.status_code != 200:
 		raise Exception("Unable to get DATA for object {0} : {1}".format(identifier, response.status_code))
 
-	r = lxml.etree.fromstring(response.text.encode("UTF-8"))
+	return lxml.etree.fromstring(response.text.encode("UTF-8"))
+
+def getValues(url, identifier, fields, categories):
+	values = {}
+	r = getData(url, identifier) 
 
 	for field in fields:
 		d = r.xpath('//field[@name="' + field + '"]')
 		if len(d) == 1:
-			value = [it.text.strip() for it in d[0].findall('item') ]
+			value = [convert(it, categories) for it in d[0].findall('item') ]
 			if len(value) == 0:
-				value.append(d[0].text.encode("latin-1", errors='ignore').strip())
-			values[field] = ", ".join(value)
-	
+				value.append(convert(d[0], categories))
+			values[field] = ", ".join(filter(None, value))
+
 	return values
 
 def export(options):
@@ -39,7 +53,7 @@ def export(options):
 
 		for identifier in identifiers :
 			try :
-				writer.writerow(getValues(options.url, identifier, options.fields))
+				writer.writerow(getValues(options.url, identifier, options.fields, options.categories))
 				success_count += 1
 			except Exception as e:
 				print e
@@ -51,6 +65,7 @@ def export(options):
 if __name__ == "__main__":
 	parser = optparse.OptionParser()
 	parser.add_option('--field', action="append", dest='fields', default=[], help="Field name")
+	parser.add_option('--categoryfilter', action="append", dest='categories', default=[], help="Limit categories to this list")
 	parser.add_option('--input', action="store", dest='inputfile', default="results.csv", help="CSV source (First column must contain JCMS ID)")
 	parser.add_option('--output', action="store", dest='outputfile', default="export.csv", help="CSV output filename ")
 	parser.add_option('--url', action="store", dest='url', default="http://sunweb1:15961", help="JCMS base URL (exemple : localhost:8080)")
