@@ -1,3 +1,4 @@
+#--categoryfilter aca_7986 --categoryfilter aca_7988 --categoryfilter t1_18973 --categoryfilter t1_18978 --categoryfilter t1_18979 --categoryfilter t1_18980 --categoryfilter t1_18981 --categoryfilter t1_18982 --categoryfilter t1_18984
 import optparse
 import csv
 import requests
@@ -9,17 +10,6 @@ def getIDs(inputfile):
 		next(csvreader, None)  # skip the headers
 		IDs = [row[0] for row in csvreader if len(row) > 0]
 	return IDs
-
-def getIdCat(item, categories):
-	data = item.text
-
-	if 'class' in item.attrib and item.attrib['class'] == "com.jalios.jcms.Category" :
-		if len(categories) == 0 or item.attrib['id'] in categories:
-			data = item.attrib['id']
-		else:
-			data = ""
-	
-	return data
 
 def convert(item, categories):
 	data = item.text
@@ -45,48 +35,19 @@ def getValues(url, identifier, fields, categories):
 	r = getData(url, identifier) 
 
 	for field in fields:
-		field = field.decode('cp1252')
 		d = r.xpath('//field[@name="' + field + '"]')
 		if len(d) == 1:
-			idcats = [getIdCat(it, categories) for it in d[0].findall('item') ]
 			value = [convert(it, categories) for it in d[0].findall('item') ]
 			if len(value) == 0:
 				value.append(convert(d[0], categories))
-			if len(idcats) > 0:
-				for i in range(0, len(idcats)):
-					values[value[i]] = value[i]
-					#values[value[i]] = value[i].decode('cp1252')
-			else:
-				values[field] = "||".join(filter(None, value))
+			values[field] = ", ".join(filter(None, value))
 
 	return values
-
-def appendCategoriesFields(url, identifier, fields, categories):
-	values = {}
-	r = getData(url, identifier) 
-
-	tmpfields = fields
-	for field in fields:
-		field = field.decode('cp1252')
-		d = r.xpath('//field[@name="' + field + '"]')
-		if len(d) == 1:
-			idcats = [getIdCat(it, categories) for it in d[0].findall('item') ]
-			value = [convert(it, categories) for it in d[0].findall('item') ]
-			if len(idcats) > 0:
-				for i in range(0, len(idcats)):
-					if value[i] not in tmpfields:
-						tmpfields.append(value[i])
-
-	return tmpfields
 
 def export(options):
 	identifiers = getIDs(options.inputfile)
 	success_count = 0
 	error_count = 0
-
-	for identifier in identifiers :
-		options.fields = appendCategoriesFields(options.url, identifier, options.fields, options.categories)
-
 	with open(options.outputfile, 'wb') as csvfile:
 		writer = csv.DictWriter(csvfile, fieldnames=options.fields, delimiter=';', quotechar='"')
 		writer.writeheader()
@@ -111,4 +72,4 @@ if __name__ == "__main__":
 	parser.add_option('--url', action="store", dest='url', default="http://sunweb1:15961", help="JCMS base URL (exemple : localhost:8080)")
 
 	options, _ = parser.parse_args()
-	export(options)
+   	export(options)
